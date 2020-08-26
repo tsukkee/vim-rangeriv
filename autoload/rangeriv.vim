@@ -5,25 +5,28 @@ set cpo&vim
 
 let s:basedir = fnamemodify(expand('<sfile>'), ':p:h:h')
 
-function! s:rangeriv_eval_conf(key) abort
-    return 'eval print(''\033]51;["call","TapiRangeriv_handler",["' . a:key . '","'' + fm.thisfile.path + ''"]]\x07'')'
+function! s:map_cmd(key) abort
+    return printf(
+    \   'map %s eval -q print(''\033]51;["call","TapiRangeriv_handler",["%s","'' + fm.thisfile.path + ''"]]\x07'')',
+    \   a:key, a:key)
 endfunction
 
-function! rangeriv#start(startdir)
+function! rangeriv#start(startdir) abort
     " get configurations
     let s:rangeriv_map = get(g:, 'rangeriv_map', {})
     let s:rangeriv_opener = get(g:, 'rangeriv_opener', 'edit')
     let s:rangeriv_rows = get(g:, 'rangeriv_rows', 12)
+    let s:rangeriv_close_on_vimexit = get(g:, 'rangeriv_close_on_vimexit', v:false)
 
     " use existing one
-    if exists('t:ranger')
-        let winnr = bufwinnr(t:ranger)
+    if exists('t:rangeriv_buffer')
+        let winnr = bufwinnr(t:rangeriv_buffer)
         if winnr > -1
             " focus to that
             execute "normal!" winnr "\<C-w>\<C-w>"
         else
             " show again
-            execute "topleft" t:ranger "sbuffer"
+            execute "topleft" t:rangeriv_buffer "sbuffer"
             execute "resize" s:rangeriv_rows
             setlocal winfixheight
         endif
@@ -31,23 +34,22 @@ function! rangeriv#start(startdir)
     endif
 
     " create new one
-    let configs = []
-    let temp_conf = tempname()
-    for [key, val] in items(s:rangeriv_map)
-        call add(configs, 'map ' . key . ' ' . s:rangeriv_eval_conf(key))
-    endfor
-    call writefile(configs, temp_conf)
+    let cmds = join(map(items(s:rangeriv_map),
+    \   {_, item -> '--cmd="' . escape(s:map_cmd(item[0]), '\\"') . '"'}),
+    \   ' ')
 
     let startdir = isdirectory(a:startdir) ? a:startdir : fnamemodify(a:startdir, ':h')
 
-    let t:ranger = term_start(
-    \   'ranger --cmd="source ' . temp_conf . '" ' . startdir,
+    let t:rangeriv_buffer = term_start(
+    \   'ranger ' . cmds . ' ' . startdir,
     \   {
     \       'env': {'EDITOR': s:basedir . '/scripts/rangeriv.py'},
     \       'term_api': 'TapiRangeriv_',
     \       'term_name': '[rangeriv]',
     \       'term_finish': 'close',
-    \       'exit_cb': { -> execute('unlet t:ranger') }
+    \       'term_kill': s:rangeriv_close_on_vimexit ? 'kill': '',
+    \       'norestore': v:true,
+    \       'exit_cb': { -> execute('unlet t:rangeriv_buffer') }
     \   }
     \)
 
