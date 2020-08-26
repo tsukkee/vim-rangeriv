@@ -11,11 +11,4 @@ command! RangerivClose
 \|      execute "normal!" bufwinnr(t:rangeriv_buffer) . "\<C-w>c"
 \|  endif
 
-if get(g:, 'rangeriv_clean_on_exit', v:false)
-    augroup rangeriv
-        autocmd!
-        autocmd ExitPre * tabdo call rangeriv#clean()
-    augroup END
-endif
-
 let &cpo = s:save_cpo

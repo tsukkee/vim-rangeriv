@@ -47,7 +47,7 @@ function! rangeriv#start(startdir) abort
     \       'term_api': 'TapiRangeriv_',
     \       'term_name': '[rangeriv]',
     \       'term_finish': 'close',
-    \       'term_kill': s:rangeriv_close_on_vimexit ? 'kill': '',
+    \       'term_kill': s:rangeriv_close_on_vimexit ? 'term': '',
     \       'norestore': v:true,
     \       'exit_cb': { -> execute('unlet t:rangeriv_buffer') }
     \   }
